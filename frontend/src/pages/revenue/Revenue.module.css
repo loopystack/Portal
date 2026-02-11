@@ -1,0 +1,553 @@
+.page {
+  min-height: 100vh;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 24px var(--shadow);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--accent-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  position: relative;
+  padding: 0.35rem 0;
+}
+
+.nav a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-end));
+  border-radius: 2px;
+  transition: width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav a:hover { color: var(--text); }
+.nav a:hover::after { width: 100%; }
+
+.navActive {
+  color: var(--accent) !important;
+  font-weight: 600;
+}
+
+.navActive::after {
+  width: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-end));
+}
+
+.adminLink {
+  color: #f59e0b !important;
+}
+
+.user {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.logoutBtn {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 0.5rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.logoutBtn:hover {
+  color: var(--text);
+  border-color: var(--border-glow);
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.main {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem;
+}
+
+.mainHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.mainHeader h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.error {
+  padding: 0.5rem 0.9rem;
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--error);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+/* Dashboard grid: chart first, then 3 cards, then history + yearly */
+.dashboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 1rem;
+  grid-template-areas:
+    "hero   hero   hero"
+    "target add    calendar"
+    "history history yearly";
+}
+
+/* Hero: monthly chart full width, prominent */
+.heroChart {
+  grid-area: hero;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px var(--shadow);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.heroChart:hover {
+  box-shadow: 0 8px 32px var(--shadow), 0 0 0 1px var(--border-glow);
+}
+
+.chartHead {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.heroChart h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.chartSub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.chartWrapHero {
+  width: 100%;
+  min-height: 280px;
+  border-radius: 8px;
+}
+
+/* Cards: same style, appropriate size */
+.cardTarget,
+.cardAdd,
+.cardCalendar,
+.cardHistory,
+.cardYearly {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.25rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px var(--shadow);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.cardTarget:hover,
+.cardAdd:hover,
+.cardCalendar:hover,
+.cardHistory:hover,
+.cardYearly:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 32px var(--shadow), 0 0 0 1px var(--border-glow);
+}
+
+.cardTarget {
+  grid-area: target;
+}
+
+.cardAdd {
+  grid-area: add;
+}
+
+.cardCalendar {
+  grid-area: calendar;
+}
+
+.cardHistory {
+  grid-area: history;
+  min-height: 0;
+}
+
+.cardYearly {
+  grid-area: yearly;
+}
+
+.cardTarget h3,
+.cardAdd h3,
+.cardCalendar h3,
+.cardHistory h3,
+.cardYearly h3 {
+  margin: 0 0 0.2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.cardDesc {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Target card form: vertical compact */
+.expectedForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.expectedForm .label {
+  margin: 0;
+}
+
+.row2 {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.row2 .input,
+.row2 .select {
+  flex: 1;
+  max-width: none;
+}
+
+.targetDisplay {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.targetDisplay strong {
+  color: var(--success);
+}
+
+/* Add entry form: vertical */
+.entryForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.entryForm .label {
+  margin: 0;
+}
+
+/* Shared inputs */
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.label span {
+  font-size: 0.8rem;
+}
+
+.input,
+.select {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.inputNum {
+  width: 4rem;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.input:focus,
+.select:focus,
+.inputNum:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.btnPrimary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-end));
+  color: white;
+  border: none;
+  padding: 0.55rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.25rem;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--accent-glow);
+}
+
+.btnPrimary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Calendar inside card: compact */
+.calendarControls {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.calendarControls .select {
+  flex: 1;
+  max-width: none;
+}
+
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  font-size: 0.75rem;
+}
+
+.calendarHeader {
+  padding: 0.25rem;
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.calendarCell {
+  min-height: 36px;
+  padding: 0.2rem;
+  background: var(--bg);
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  justify-content: center;
+}
+
+.calendarCellEmpty {
+  min-height: 36px;
+  padding: 0.2rem;
+  background: transparent;
+  border-radius: 4px;
+}
+
+.calendarDayNum {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.75rem;
+}
+
+.calendarAmount {
+  font-size: 0.65rem;
+  color: var(--success);
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+/* History: scrollable list */
+.historyFilters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.historyFilters .input {
+  max-width: 140px;
+}
+
+.toLabel {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.historyList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  max-height: 240px;
+}
+
+.historyItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.historyItem:last-child {
+  border-bottom: none;
+}
+
+.historyDate {
+  min-width: 96px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.historyAmount {
+  min-width: 64px;
+  color: var(--success);
+  font-weight: 600;
+}
+
+.historyNote {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btnSmall,
+.btnSmallSecondary {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.btnSmall {
+  background: var(--accent);
+  color: white;
+  border: none;
+}
+
+.btnSmall:hover {
+  background: var(--accent-hover);
+}
+
+.btnSmallSecondary {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.btnSmallSecondary:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+.btnDangerSmall {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  background: transparent;
+  border: 1px solid var(--error);
+  color: var(--error);
+  cursor: pointer;
+}
+
+.btnDangerSmall:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.inlineForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.inlineForm .input {
+  max-width: 80px;
+}
+
+.chartWrapSmall {
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Responsive: stack on narrow */
+@media (max-width: 900px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "hero"
+      "target"
+      "add"
+      "calendar"
+      "history"
+      "yearly";
+  }
+}

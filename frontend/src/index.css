@@ -1,0 +1,196 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ========== WOW THEME – DARK ========== */
+[data-theme="dark"] {
+  --bg: #0a0a0f;
+  --bg-card: rgba(18, 18, 28, 0.75);
+  --bg-card-solid: #12121c;
+  --bg-elevated: rgba(28, 28, 42, 0.9);
+  --text: #f4f4f8;
+  --text-muted: #a0a0b8;
+  --accent: #6366f1;
+  --accent-end: #a855f7;
+  --accent-glow: rgba(99, 102, 241, 0.4);
+  --accent-hover: #818cf8;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-glow: rgba(99, 102, 241, 0.25);
+  --error: #f87171;
+  --success: #4ade80;
+  --chart-grid: rgba(255, 255, 255, 0.06);
+  --shadow: rgba(0, 0, 0, 0.4);
+  --glass: rgba(255, 255, 255, 0.03);
+}
+
+/* ========== LIGHT THEME – all light colors, no background animation ========== */
+[data-theme="light"] {
+  --bg: #f0f2f5;
+  --bg-card: #ffffff;
+  --bg-card-solid: #ffffff;
+  --bg-elevated: #ffffff;
+  --text: #1a1d21;
+  --text-muted: #65676b;
+  --accent: #1877f2;
+  --accent-end: #1877f2;
+  --accent-glow: rgba(24, 119, 242, 0.2);
+  --accent-hover: #166fe5;
+  --border: #e4e6eb;
+  --border-glow: rgba(24, 119, 242, 0.25);
+  --error: #dc2626;
+  --success: #16a34a;
+  --chart-grid: #e4e6eb;
+  --shadow: rgba(0, 0, 0, 0.08);
+  --glass: rgba(255, 255, 255, 0.9);
+}
+
+:root {
+  --bg: #0a0a0f;
+  --bg-card: rgba(18, 18, 28, 0.75);
+  --bg-card-solid: #12121c;
+  --bg-elevated: rgba(28, 28, 42, 0.9);
+  --text: #f4f4f8;
+  --text-muted: #a0a0b8;
+  --accent: #6366f1;
+  --accent-end: #a855f7;
+  --accent-glow: rgba(99, 102, 241, 0.4);
+  --accent-hover: #818cf8;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-glow: rgba(99, 102, 241, 0.25);
+  --error: #f87171;
+  --success: #4ade80;
+  --chart-grid: rgba(255, 255, 255, 0.06);
+  --shadow: rgba(0, 0, 0, 0.4);
+  --glass: rgba(255, 255, 255, 0.03);
+}
+
+/* ========== KEYFRAMES ========== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -30px) scale(1.05); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes themeToggleSpin {
+  from { transform: rotate(0deg) scale(1); }
+  to { transform: rotate(360deg) scale(1.1); }
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ========== BACKGROUND ========== */
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Night mode only: animated gradient orbs. Light mode has no pseudo-elements. */
+[data-theme="dark"] body::before,
+[data-theme="dark"] body::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 0;
+}
+
+[data-theme="dark"] body::before {
+  width: min(80vmax, 600px);
+  height: min(80vmax, 600px);
+  background: radial-gradient(circle, var(--accent) 0%, var(--accent-end) 50%, transparent 70%);
+  top: -20%;
+  right: -10%;
+  animation: float 18s ease-in-out infinite;
+}
+
+[data-theme="dark"] body::after {
+  width: min(60vmax, 400px);
+  height: min(60vmax, 400px);
+  background: radial-gradient(circle, #a855f7 0%, #6366f1 40%, transparent 70%);
+  bottom: -10%;
+  left: -5%;
+  animation: float 22s ease-in-out infinite reverse;
+}
+
+/* Light mode: no ::before or ::after – body uses only --bg (solid light). */
+[data-theme="light"] body::before,
+[data-theme="light"] body::after {
+  content: none;
+  display: none;
+}
+
+#root {
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+/* ========== GLOBAL TRANSITIONS ========== */
+a, button, input, .card, .header {
+  transition: color 0.25s ease, background 0.25s ease, border-color 0.25s ease,
+    box-shadow 0.25s ease, transform 0.25s ease, opacity 0.25s ease;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+a:hover {
+  color: var(--accent-hover);
+  text-decoration: none;
+}
+
+input,
+button {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Utility for gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, var(--accent), var(--accent-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

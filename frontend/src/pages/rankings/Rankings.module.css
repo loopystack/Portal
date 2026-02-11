@@ -1,0 +1,342 @@
+.page {
+  min-height: 100vh;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 24px var(--shadow);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--accent-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  position: relative;
+  padding: 0.35rem 0;
+}
+
+.nav a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-end));
+  border-radius: 2px;
+  transition: width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav a:hover { color: var(--text); }
+.nav a:hover::after { width: 100%; }
+
+.navActive {
+  color: var(--accent) !important;
+  font-weight: 600;
+}
+
+.navActive::after {
+  width: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-end));
+}
+
+.adminLink {
+  color: #f59e0b !important;
+}
+
+.user {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.logoutBtn {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 0.5rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.logoutBtn:hover {
+  color: var(--text);
+  border-color: var(--border-glow);
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.main {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem;
+}
+
+.mainHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.mainHeader h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.error {
+  padding: 0.5rem 0.9rem;
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--error);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.loading {
+  color: var(--text-muted);
+  padding: 2rem;
+}
+
+.dashboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  grid-template-areas:
+    "heroWork   heroRevenue"
+    "tableWork  tableRevenue";
+}
+
+.heroWork {
+  grid-area: heroWork;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px var(--shadow);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.heroWork:hover {
+  box-shadow: 0 8px 32px var(--shadow), 0 0 0 1px var(--border-glow);
+}
+
+.heroRevenue {
+  grid-area: heroRevenue;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px var(--shadow);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.heroRevenue:hover {
+  box-shadow: 0 8px 32px var(--shadow), 0 0 0 1px var(--border-glow);
+}
+
+.chartHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.chartHead h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.periodTabs {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.tab,
+.tabActive {
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  border: none;
+  cursor: pointer;
+  background: var(--bg);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tabActive {
+  background: linear-gradient(135deg, var(--accent), var(--accent-end));
+  color: white;
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.chartSub {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.chartWrap {
+  width: 100%;
+  min-height: 280px;
+  border-radius: 8px;
+}
+
+.tableCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px var(--shadow);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.tableCard:hover {
+  box-shadow: 0 8px 32px var(--shadow), 0 0 0 1px var(--border-glow);
+}
+
+.tableCard:nth-of-type(1) {
+  grid-area: tableWork;
+}
+
+.tableCard:nth-of-type(2) {
+  grid-area: tableRevenue;
+}
+
+.tableCard h3 {
+  margin: 0 0 0.2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.cardSub {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.tableWrap {
+  overflow: auto;
+  max-height: 320px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.table th,
+.table td {
+  padding: 0.5rem 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.table tbody tr:hover {
+  background: var(--glass);
+}
+
+.rankCell {
+  font-weight: 700;
+  color: var(--text-muted);
+  width: 2rem;
+}
+
+.nameCell {
+  font-weight: 500;
+  color: var(--text);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.totalCell {
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--accent-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@media (max-width: 900px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "heroWork"
+      "heroRevenue"
+      "tableWork"
+      "tableRevenue";
+  }
+}
