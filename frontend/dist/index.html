@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <title>PYCE Portal</title>
+    <script type="module" crossorigin src="/assets/index-7l-sLTLo.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CK1jKX5C.css">
+  </head>
+  <body>
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('pyce_theme');
+          document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
+    <!-- Visible only if React never mounts (diagnostic for IP access) -->
+    <noscript><p style="padding:1rem;color:#c00;font-family:sans-serif;">JavaScript is required.</p></noscript>
+    <div id="root">
+      <p style="padding: 2rem; color: #333; font-family: sans-serif;">Loading app…</p>
+    </div>
+  </body>
+</html>

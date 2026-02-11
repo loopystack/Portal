@@ -134,7 +134,7 @@ export default function AdminRankings() {
                   <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={(v) => `${v}h`} width={40} />
                   <Tooltip
                     contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }}
-                    formatter={(value: number) => [formatHours(value), 'Hours']}
+                    formatter={(value: number | undefined) => [value != null ? formatHours(value) : '', 'Hours']}
                     labelFormatter={(_, payload) => (payload && payload[0] && (payload[0] as { payload?: { fullName?: string } }).payload?.fullName) ?? ''}
                   />
                   <Bar dataKey="value" name="Hours" fill="var(--accent)" radius={[4, 4, 0, 0]}>
@@ -172,7 +172,7 @@ export default function AdminRankings() {
                   <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={(v) => `$${v}`} width={44} />
                   <Tooltip
                     contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }}
-                    formatter={(value: number) => [formatMoney(value), '']}
+                    formatter={(value: number | undefined) => [value != null ? formatMoney(value) : '', '']}
                     labelFormatter={(_, payload) => (payload && payload[0] && (payload[0] as { payload?: { fullName?: string } }).payload?.fullName) ?? ''}
                   />
                   <Legend />

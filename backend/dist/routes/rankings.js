@@ -1,0 +1,130 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const pool_1 = require("../db/pool");
+const auth_1 = require("../middleware/auth");
+const router = (0, express_1.Router)();
+router.use(auth_1.authMiddleware);
+// Helpers for date ranges (server timezone)
+const todayStart = "date_trunc('day', CURRENT_DATE)";
+const todayEnd = "date_trunc('day', CURRENT_DATE) + interval '1 day'";
+const weekStart = "date_trunc('day', CURRENT_DATE) - (EXTRACT(DOW FROM CURRENT_DATE)::int * interval '1 day')";
+const weekEnd = "date_trunc('day', CURRENT_DATE) - (EXTRACT(DOW FROM CURRENT_DATE)::int * interval '1 day') + interval '7 days'";
+const monthStart = "date_trunc('month', CURRENT_DATE)";
+const monthEnd = "date_trunc('month', CURRENT_DATE) + interval '1 month'";
+// GET /api/rankings/work-hours — all members' work hours (daily, weekly, monthly, total), Work blocks only
+router.get('/work-hours', async (_req, res) => {
+    try {
+        const workQuery = `
+      WITH ranges AS (
+        SELECT
+          ${todayStart} AS today_s,
+          ${todayEnd} AS today_e,
+          ${weekStart} AS week_s,
+          ${weekEnd} AS week_e,
+          ${monthStart} AS month_s,
+          ${monthEnd} AS month_e
+      ),
+      blocks AS (
+        SELECT
+          user_id,
+          start_at,
+          end_at,
+          (SELECT today_s FROM ranges) AS today_s,
+          (SELECT today_e FROM ranges) AS today_e,
+          (SELECT week_s FROM ranges) AS week_s,
+          (SELECT week_e FROM ranges) AS week_e,
+          (SELECT month_s FROM ranges) AS month_s,
+          (SELECT month_e FROM ranges) AS month_e
+        FROM time_blocks, ranges
+        WHERE summary IS NOT NULL AND (summary = 'Work' OR summary LIKE 'Work' || E'\\n\\n' || '%')
+      )
+      SELECT
+        user_id,
+        COALESCE(SUM(
+          CASE WHEN start_at < today_e AND end_at > today_s
+          THEN EXTRACT(EPOCH FROM (LEAST(end_at, today_e) - GREATEST(start_at, today_s))) / 3600
+          ELSE 0 END
+        ), 0) AS daily_hours,
+        COALESCE(SUM(
+          CASE WHEN start_at < week_e AND end_at > week_s
+          THEN EXTRACT(EPOCH FROM (LEAST(end_at, week_e) - GREATEST(start_at, week_s))) / 3600
+          ELSE 0 END
+        ), 0) AS weekly_hours,
+        COALESCE(SUM(
+          CASE WHEN start_at < month_e AND end_at > month_s
+          THEN EXTRACT(EPOCH FROM (LEAST(end_at, month_e) - GREATEST(start_at, month_s))) / 3600
+          ELSE 0 END
+        ), 0) AS monthly_hours,
+        COALESCE(SUM(EXTRACT(EPOCH FROM (end_at - start_at)) / 3600), 0) AS total_hours
+      FROM blocks
+      GROUP BY user_id
+    `;
+        const { rows: workRows } = await pool_1.pool.query(workQuery);
+        const { rows: users } = await pool_1.pool.query("SELECT id, display_name, email FROM users WHERE role = 'member' ORDER BY display_name NULLS LAST, email");
+        const workByUser = new Map(workRows.map((r) => [r.user_id, r]));
+        const result = users.map((u) => {
+            const w = workByUser.get(u.id);
+            return {
+                userId: u.id,
+                displayName: u.display_name || u.email,
+                email: u.email,
+                dailyHours: w ? Number(Number(w.daily_hours).toFixed(2)) : 0,
+                weeklyHours: w ? Number(Number(w.weekly_hours).toFixed(2)) : 0,
+                monthlyHours: w ? Number(Number(w.monthly_hours).toFixed(2)) : 0,
+                totalHours: w ? Number(Number(w.total_hours).toFixed(2)) : 0,
+            };
+        });
+        result.sort((a, b) => b.totalHours - a.totalHours);
+        res.json(result);
+    }
+    catch (err) {
+        console.error('Rankings work-hours error:', err);
+        res.status(500).json({
+            error: 'Failed to load work hours rankings',
+            ...(process.env.NODE_ENV === 'development' && err instanceof Error && { detail: err.message }),
+        });
+    }
+});
+// GET /api/rankings/revenue — all members' revenue (monthly, total) and expected (current month)
+router.get('/revenue', async (_req, res) => {
+    try {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        const monthStartStr = `${year}-${String(month).padStart(2, '0')}-01`;
+        const monthEndDate = new Date(year, month, 0);
+        const monthEndStr = monthEndDate.toISOString().slice(0, 10);
+        const { rows: revRows } = await pool_1.pool.query(`SELECT user_id,
+        SUM(amount) AS total,
+        SUM(CASE WHEN date >= $1 AND date <= $2 THEN amount ELSE 0 END) AS monthly
+       FROM revenue_entries
+       GROUP BY user_id`, [monthStartStr, monthEndStr]);
+        const { rows: expRows } = await pool_1.pool.query('SELECT user_id, amount FROM expected_revenue WHERE year = $1 AND month = $2', [year, month]);
+        const { rows: users } = await pool_1.pool.query("SELECT id, display_name, email FROM users WHERE role = 'member' ORDER BY display_name NULLS LAST, email");
+        const revByUser = new Map(revRows.map((r) => [r.user_id, { total: Number(r.total), monthly: Number(r.monthly) }]));
+        const expByUser = new Map(expRows.map((r) => [r.user_id, Number(r.amount)]));
+        const result = users.map((u) => {
+            const r = revByUser.get(u.id);
+            const exp = expByUser.get(u.id);
+            return {
+                userId: u.id,
+                displayName: u.display_name || u.email,
+                email: u.email,
+                monthlyRevenue: r ? Number(Number(r.monthly).toFixed(2)) : 0,
+                totalRevenue: r ? Number(Number(r.total).toFixed(2)) : 0,
+                expectedRevenue: exp != null ? Number(Number(exp).toFixed(2)) : null,
+            };
+        });
+        result.sort((a, b) => b.totalRevenue - a.totalRevenue);
+        res.json(result);
+    }
+    catch (err) {
+        console.error('Rankings revenue error:', err);
+        res.status(500).json({
+            error: 'Failed to load revenue rankings',
+            ...(process.env.NODE_ENV === 'development' && err instanceof Error && { detail: err.message }),
+        });
+    }
+});
+exports.default = router;

@@ -12,7 +12,7 @@ import {
   Line,
   ComposedChart,
 } from 'recharts';
-import { revenueApi, type RevenueEntryResponse, type ExpectedRevenueResponse } from '../../api/client';
+import { revenueApi, type RevenueEntryResponse } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import styles from './Revenue.module.css';
@@ -275,7 +275,7 @@ export default function Revenue() {
                   <Tooltip
                     contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }}
                     labelStyle={{ color: 'var(--text)' }}
-                    formatter={(value: number) => [formatMoney(value), '']}
+                    formatter={(value: number | undefined) => [value != null ? formatMoney(value) : '', '']}
                     labelFormatter={(label) => label}
                   />
                   <Legend />
@@ -469,7 +469,7 @@ export default function Revenue() {
                   <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
                   <Tooltip
                     contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }}
-                    formatter={(value: number) => [formatMoney(value), '']}
+                    formatter={(value: number | undefined) => [value != null ? formatMoney(value) : '', '']}
                   />
                   <Bar dataKey="revenue" name="Received" fill="var(--accent)" radius={[4, 4, 0, 0]} />
                 </BarChart>

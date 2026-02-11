@@ -51,8 +51,8 @@ router.post(
         const user = rows[0];
         const token = jwt.sign(
           { userId: user.id, email: user.email, role: user.role },
-          config.jwt.secret,
-          { expiresIn: config.jwt.expiresIn }
+          config.jwt.secret as jwt.Secret,
+          { expiresIn: config.jwt.expiresIn } as jwt.SignOptions
         );
         res.status(201).json({ user: toPublic(user), token });
       } finally {
@@ -97,8 +97,8 @@ router.post(
       }
       const token = jwt.sign(
         { userId: user.id, email: user.email, role: user.role },
-        config.jwt.secret,
-        { expiresIn: config.jwt.expiresIn }
+        config.jwt.secret as jwt.Secret,
+        { expiresIn: config.jwt.expiresIn } as jwt.SignOptions
       );
       res.json({ user: toPublic(user), token });
     } catch (err) {

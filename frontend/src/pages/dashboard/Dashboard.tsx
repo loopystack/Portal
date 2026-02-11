@@ -355,7 +355,7 @@ export default function Dashboard() {
                       borderRadius: '10px',
                     }}
                     labelStyle={{ color: 'var(--text-muted)' }}
-                    formatter={(value: number) => [`${Number(value).toFixed(1)}h`, 'Work']}
+                    formatter={(value: number | undefined) => [value != null ? `${Number(value).toFixed(1)}h` : '', 'Work']}
                     labelFormatter={(_, payload) => payload[0]?.payload?.label ?? ''}
                   />
                   <Bar dataKey="hours" fill="var(--accent)" radius={[4, 4, 0, 0]} />
