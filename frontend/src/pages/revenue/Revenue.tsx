@@ -103,6 +103,7 @@ export default function Revenue() {
     try {
       await revenueApi.setExpected(expectedYear, expectedMonth, amount);
       setExpectedAmount(amount);
+      setExpectedByMonth((prev) => ({ ...prev, [`${expectedYear}-${expectedMonth}`]: amount }));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save');
     } finally {
@@ -124,7 +125,13 @@ export default function Revenue() {
       setEntryAmount('');
       setEntryNote('');
       setEntryDate(toYMD(new Date()));
-      await fetchEntries(historyFrom, historyTo);
+      const from = historyFrom <= entryDate ? historyFrom : entryDate;
+      const to = historyTo >= entryDate ? historyTo : entryDate;
+      if (from !== historyFrom || to !== historyTo) {
+        setHistoryFrom(from);
+        setHistoryTo(to);
+      }
+      await fetchEntries(from, to);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to add');
     } finally {

@@ -227,6 +227,26 @@
   color: var(--text-muted);
 }
 
+.monthPicker {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.monthSelect {
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.monthSelect:hover {
+  border-color: var(--accent);
+}
+
 .chartWrap {
   width: 100%;
   min-height: 280px;

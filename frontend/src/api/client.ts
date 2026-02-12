@@ -147,7 +147,12 @@ export interface RevenueRankItem {
 
 export const rankingsApi = {
   workHours: () => api<WorkHoursRankItem[]>('/rankings/work-hours'),
-  revenue: () => api<RevenueRankItem[]>('/rankings/revenue'),
+  revenue: (year?: number, month?: number) =>
+    api<RevenueRankItem[]>(
+      year != null && month != null
+        ? `/rankings/revenue?year=${year}&month=${month}`
+        : '/rankings/revenue'
+    ),
 };
 
 export interface AdminMember {

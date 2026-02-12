@@ -21,8 +21,14 @@ import styles from './Rankings.module.css';
 const WORK_PERIODS = ['daily', 'weekly', 'monthly', 'total'] as const;
 type WorkPeriod = (typeof WORK_PERIODS)[number];
 
-const REVENUE_PERIODS = ['monthly', 'total'] as const;
+const REVENUE_PERIODS = ['monthly', 'total', 'specific'] as const;
 type RevenuePeriod = (typeof REVENUE_PERIODS)[number];
+
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function getYears(): number[] {
+  const y = new Date().getFullYear();
+  return [y, y - 1, y - 2, y - 3, y - 4];
+}
 
 function formatHours(h: number): string {
   if (h < 0.01) return '0h';
@@ -48,9 +54,13 @@ export default function Rankings() {
 
   const [workHours, setWorkHours] = useState<WorkHoursRankItem[]>([]);
   const [revenue, setRevenue] = useState<RevenueRankItem[]>([]);
+  const [revenueForMonth, setRevenueForMonth] = useState<RevenueRankItem[] | null>(null);
   const [workPeriod, setWorkPeriod] = useState<WorkPeriod>('total');
   const [revenuePeriod, setRevenuePeriod] = useState<RevenuePeriod>('monthly');
+  const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => new Date().getMonth() + 1);
   const [loading, setLoading] = useState(true);
+  const [revenueLoading, setRevenueLoading] = useState(false);
   const [error, setError] = useState('');
 
   const fetchRankings = useCallback(async () => {
@@ -73,6 +83,26 @@ export default function Rankings() {
     fetchRankings();
   }, [fetchRankings]);
 
+  const fetchRevenueForMonth = useCallback(async (year: number, month: number) => {
+    setRevenueLoading(true);
+    try {
+      const rev = await rankingsApi.revenue(year, month);
+      setRevenueForMonth(rev);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load revenue for month');
+    } finally {
+      setRevenueLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (revenuePeriod === 'specific') {
+      fetchRevenueForMonth(selectedYear, selectedMonth);
+    } else {
+      setRevenueForMonth(null);
+    }
+  }, [revenuePeriod, selectedYear, selectedMonth, fetchRevenueForMonth]);
+
   const workHoursKey = workPeriod === 'daily' ? 'dailyHours' : workPeriod === 'weekly' ? 'weeklyHours' : workPeriod === 'monthly' ? 'monthlyHours' : 'totalHours';
   const workChartData = workHours.map((r, i) => ({
     name: truncateName(r.displayName, 14),
@@ -81,10 +111,11 @@ export default function Rankings() {
     rank: i + 1,
   }));
 
-  const revenueChartData = revenue.map((r, i) => ({
+  const revenueSource = revenuePeriod === 'specific' ? revenueForMonth : revenue;
+  const revenueChartData = (revenueSource ?? []).map((r, i) => ({
     name: truncateName(r.displayName, 14),
     fullName: r.displayName,
-    value: revenuePeriod === 'monthly' ? r.monthlyRevenue : r.totalRevenue,
+    value: revenuePeriod === 'total' ? r.totalRevenue : r.monthlyRevenue,
     expected: r.expectedRevenue ?? 0,
     rank: i + 1,
   }));
@@ -98,7 +129,11 @@ export default function Rankings() {
     }
   };
 
-  const getRevenuePeriodLabel = () => (revenuePeriod === 'monthly' ? 'This month (with target)' : 'All time');
+  const getRevenuePeriodLabel = () => {
+    if (revenuePeriod === 'monthly') return 'This month (with target)';
+    if (revenuePeriod === 'total') return 'All time';
+    return `${MONTH_NAMES[selectedMonth - 1]} ${selectedYear}${revenueForMonth != null ? ' (with target)' : ''}`;
+  };
 
   const medalColor = (i: number) => (i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : i === 2 ? '#b45309' : 'var(--accent)');
 
@@ -169,7 +204,7 @@ export default function Rankings() {
               </div>
             </section>
 
-            {/* Hero: Revenue chart (Monthly / Total buttons, same style as work hours) */}
+            {/* Hero: Revenue chart (Monthly / Total / Select month) */}
             <section className={styles.heroRevenue}>
               <div className={styles.chartHead}>
                 <h3>Revenue ranking</h3>
@@ -181,34 +216,67 @@ export default function Rankings() {
                       className={revenuePeriod === p ? styles.tabActive : styles.tab}
                       onClick={() => setRevenuePeriod(p)}
                     >
-                      {p === 'monthly' ? 'Monthly' : 'Total'}
+                      {p === 'monthly' ? 'Monthly' : p === 'total' ? 'Total' : 'Select month'}
                     </button>
                   ))}
                 </div>
               </div>
+              {revenuePeriod === 'specific' && (
+                <div className={styles.monthPicker}>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className={styles.monthSelect}
+                    aria-label="Year"
+                  >
+                    {getYears().map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                    className={styles.monthSelect}
+                    aria-label="Month"
+                  >
+                    {MONTH_NAMES.map((name, i) => (
+                      <option key={i} value={i + 1}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <p className={styles.chartSub}>{getRevenuePeriodLabel()}</p>
               <div className={styles.chartWrap}>
-                <ResponsiveContainer width="100%" height={320}>
-                  <ComposedChart data={revenueChartData} margin={{ top: 8, right: 8, left: 8, bottom: 56 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} angle={-35} textAnchor="end" height={52} interval={0} />
-                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={(v) => `$${v}`} width={44} />
-                    <Tooltip
-                      contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }}
-                      formatter={(value: number | undefined) => [value != null ? formatMoney(value) : '', '']}
-                      labelFormatter={(_, payload) => (payload && payload[0] && (payload[0] as { payload?: { fullName?: string } }).payload?.fullName) ?? ''}
-                    />
-                    <Legend />
-                    <Bar dataKey="value" name={revenuePeriod === 'monthly' ? 'This month' : 'Total'} fill="var(--accent)" radius={[4, 4, 0, 0]}>
-                      {revenueChartData.map((_, i) => (
-                        <Cell key={i} fill={medalColor(i)} />
-                      ))}
-                    </Bar>
-                    {revenuePeriod === 'monthly' && (
-                      <Line type="monotone" dataKey="expected" name="Target (expected)" stroke="#22c55e" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} />
-                    )}
-                  </ComposedChart>
-                </ResponsiveContainer>
+                {(revenuePeriod === 'specific' && revenueLoading) ? (
+                  <p className={styles.loading}>Loading revenue for {MONTH_NAMES[selectedMonth - 1]} {selectedYear}…</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={320}>
+                    <ComposedChart data={revenueChartData} margin={{ top: 8, right: 8, left: 8, bottom: 56 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} angle={-35} textAnchor="end" height={52} interval={0} />
+                      <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={(v) => `$${v}`} width={44} />
+                      <Tooltip
+                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }}
+                        formatter={(value: number | undefined) => [value != null ? formatMoney(value) : '', '']}
+                        labelFormatter={(_, payload) => (payload && payload[0] && (payload[0] as { payload?: { fullName?: string } }).payload?.fullName) ?? ''}
+                      />
+                      <Legend />
+                      <Bar
+                        dataKey="value"
+                        name={revenuePeriod === 'monthly' ? 'This month' : revenuePeriod === 'total' ? 'Total' : `${MONTH_NAMES[selectedMonth - 1]} ${selectedYear}`}
+                        fill="var(--accent)"
+                        radius={[4, 4, 0, 0]}
+                      >
+                        {revenueChartData.map((_, i) => (
+                          <Cell key={i} fill={medalColor(i)} />
+                        ))}
+                      </Bar>
+                      {(revenuePeriod === 'monthly' || revenuePeriod === 'specific') && (
+                        <Line type="monotone" dataKey="expected" name="Target (expected)" stroke="#22c55e" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} />
+                      )}
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </section>
 

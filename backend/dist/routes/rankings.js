@@ -86,12 +86,17 @@ router.get('/work-hours', async (_req, res) => {
         });
     }
 });
-// GET /api/rankings/revenue — all members' revenue (monthly, total) and expected (current month)
-router.get('/revenue', async (_req, res) => {
+// GET /api/rankings/revenue — all members' revenue (monthly, total) and expected
+// Optional query: ?year=YYYY&month=M (1-12) to get revenue for a specific month
+router.get('/revenue', async (req, res) => {
     try {
         const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth() + 1;
+        const queryYear = req.query.year != null ? Number(req.query.year) : null;
+        const queryMonth = req.query.month != null ? Number(req.query.month) : null;
+        const useSpecificMonth = typeof queryYear === 'number' && typeof queryMonth === 'number' &&
+            queryMonth >= 1 && queryMonth <= 12 && queryYear >= 2000 && queryYear <= 2100;
+        const year = useSpecificMonth ? queryYear : now.getFullYear();
+        const month = useSpecificMonth ? queryMonth : now.getMonth() + 1;
         const monthStartStr = `${year}-${String(month).padStart(2, '0')}-01`;
         const monthEndDate = new Date(year, month, 0);
         const monthEndStr = monthEndDate.toISOString().slice(0, 10);
