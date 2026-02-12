@@ -16,12 +16,20 @@ interface RevenueEntryRow {
   updated_at: Date;
 }
 
+/** Format a Date as YYYY-MM-DD using local date (avoids timezone shifting with toISOString). */
+function formatDateOnly(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function toEntry(row: RevenueEntryRow) {
   return {
     id: row.id,
     userId: row.user_id,
     amount: Number(row.amount),
-    date: (row.date as Date).toISOString().slice(0, 10),
+    date: formatDateOnly(row.date as Date),
     note: row.note,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -125,11 +133,11 @@ router.post(
   }
 );
 
-// Update revenue entry
+// Update revenue entry. Date must be YYYY-MM-DD (kept as string to avoid timezone shift).
 router.patch(
   '/entries/:id',
   param('id').isUUID(),
-  body('date').optional().isISO8601().toDate(),
+  body('date').optional().trim().matches(/^\d{4}-\d{2}-\d{2}$/),
   body('amount').optional().isFloat().toFloat(),
   body('note').optional().trim().isLength({ max: 2000 }),
   async (req: Request, res: Response) => {
@@ -146,11 +154,7 @@ router.patch(
       let i = 1;
       if (req.body.date !== undefined) {
         updates.push(`date = $${i++}`);
-        const dateVal = req.body.date;
-        const dateStr = dateVal instanceof Date
-          ? dateVal.toISOString().slice(0, 10)
-          : String(dateVal).slice(0, 10);
-        values.push(dateStr);
+        values.push(String(req.body.date).slice(0, 10));
       }
       if (req.body.amount !== undefined) {
         updates.push(`amount = $${i++}`);

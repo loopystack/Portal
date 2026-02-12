@@ -1,10 +1,11 @@
-import { NavLink, Navigate, Outlet } from 'react-router-dom';
+import { NavLink, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import styles from './Admin.module.css';
 
 export default function AdminLayout() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   if (user?.role !== 'admin') {
     return <Navigate to="/dashboard" replace />;
@@ -26,6 +27,7 @@ export default function AdminLayout() {
       <div className={styles.contentArea}>
         <div className={styles.topBar}>
           <NavLink to="/dashboard" className={styles.backLink}>← Back to Portal</NavLink>
+          <button type="button" onClick={() => { logout(); navigate('/signin', { replace: true }); }} className={styles.signOutBtn}>Sign out</button>
         </div>
         <main className={styles.main}>
           <Outlet />

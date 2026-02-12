@@ -6,12 +6,19 @@ const pool_1 = require("../db/pool");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 router.use(auth_1.authMiddleware);
+/** Format a Date as YYYY-MM-DD using local date (avoids timezone shifting with toISOString). */
+function formatDateOnly(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
 function toEntry(row) {
     return {
         id: row.id,
         userId: row.user_id,
         amount: Number(row.amount),
-        date: row.date.toISOString().slice(0, 10),
+        date: formatDateOnly(row.date),
         note: row.note,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -85,8 +92,8 @@ router.post('/entries', (0, express_validator_1.body)('date').isISO8601(), (0, e
         });
     }
 });
-// Update revenue entry
-router.patch('/entries/:id', (0, express_validator_1.param)('id').isUUID(), (0, express_validator_1.body)('date').optional().isISO8601().toDate(), (0, express_validator_1.body)('amount').optional().isFloat().toFloat(), (0, express_validator_1.body)('note').optional().trim().isLength({ max: 2000 }), async (req, res) => {
+// Update revenue entry. Date must be YYYY-MM-DD (kept as string to avoid timezone shift).
+router.patch('/entries/:id', (0, express_validator_1.param)('id').isUUID(), (0, express_validator_1.body)('date').optional().trim().matches(/^\d{4}-\d{2}-\d{2}$/), (0, express_validator_1.body)('amount').optional().isFloat().toFloat(), (0, express_validator_1.body)('note').optional().trim().isLength({ max: 2000 }), async (req, res) => {
     try {
         const errors = (0, express_validator_1.validationResult)(req);
         if (!errors.isEmpty()) {
@@ -100,11 +107,7 @@ router.patch('/entries/:id', (0, express_validator_1.param)('id').isUUID(), (0, 
         let i = 1;
         if (req.body.date !== undefined) {
             updates.push(`date = $${i++}`);
-            const dateVal = req.body.date;
-            const dateStr = dateVal instanceof Date
-                ? dateVal.toISOString().slice(0, 10)
-                : String(dateVal).slice(0, 10);
-            values.push(dateStr);
+            values.push(String(req.body.date).slice(0, 10));
         }
         if (req.body.amount !== undefined) {
             updates.push(`amount = $${i++}`);

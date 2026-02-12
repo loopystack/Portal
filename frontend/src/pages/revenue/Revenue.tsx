@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   Line,
   ComposedChart,
+  Cell,
 } from 'recharts';
 import { revenueApi, type RevenueEntryResponse } from '../../api/client';
 import { getAppLocalParts, getTodayInAppTz } from '../../utils/datetime';
@@ -52,6 +53,7 @@ export default function Revenue() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDate, setEditDate] = useState('');
   const [editAmount, setEditAmount] = useState('');
   const [editNote, setEditNote] = useState('');
 
@@ -157,6 +159,7 @@ export default function Revenue() {
 
   const handleStartEdit = (entry: RevenueEntryResponse) => {
     setEditingId(entry.id);
+    setEditDate(entry.date);
     setEditAmount(String(entry.amount));
     setEditNote(entry.note ?? '');
   };
@@ -171,7 +174,11 @@ export default function Revenue() {
     }
     setError('');
     try {
-      await revenueApi.updateEntry(editingId, { amount, note: editNote.trim() || undefined });
+      await revenueApi.updateEntry(editingId, {
+        date: editDate.slice(0, 10),
+        amount,
+        note: editNote.trim() || undefined,
+      });
       setEditingId(null);
       await fetchEntries(historyFrom, historyTo);
     } catch (e) {
@@ -291,7 +298,11 @@ export default function Revenue() {
                     labelFormatter={(label) => label}
                   />
                   <Legend />
-                  <Bar dataKey="revenue" name="Received" fill="var(--accent)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="revenue" name="Received" fill="var(--accent)" radius={[4, 4, 0, 0]}>
+                    {thisYearMonthsWithExpected.map((row, i) => (
+                      <Cell key={i} fill={row.revenue < 0 ? '#ef4444' : 'var(--accent)'} />
+                    ))}
+                  </Bar>
                   <Line type="monotone" dataKey="expected" name="Target" stroke="#22c55e" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} />
                 </ComposedChart>
               </ResponsiveContainer>
@@ -456,6 +467,7 @@ export default function Revenue() {
                   <li key={entry.id} className={styles.historyItem}>
                     {editingId === entry.id ? (
                       <form onSubmit={handleSaveEdit} className={styles.inlineForm}>
+                        <input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} required className={styles.input} aria-label="Date" />
                         <input type="number" step={0.01} value={editAmount} onChange={(e) => setEditAmount(e.target.value)} placeholder="+ or -" className={styles.input} />
                         <input type="text" value={editNote} onChange={(e) => setEditNote(e.target.value)} placeholder="Note" className={styles.input} />
                         <button type="submit" className={styles.btnSmall}>Save</button>
@@ -489,7 +501,11 @@ export default function Revenue() {
                     contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }}
                     formatter={(value: number | undefined) => [value != null ? formatMoney(value) : '', '']}
                   />
-                  <Bar dataKey="revenue" name="Received" fill="var(--accent)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="revenue" name="Received" fill="var(--accent)" radius={[4, 4, 0, 0]}>
+                    {last5Years.map((row, i) => (
+                      <Cell key={i} fill={row.revenue < 0 ? '#ef4444' : 'var(--accent)'} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>

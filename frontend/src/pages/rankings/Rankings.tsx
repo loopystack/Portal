@@ -289,7 +289,7 @@ export default function Rankings() {
                         radius={[4, 4, 0, 0]}
                       >
                         {revenueChartData.map((_, i) => (
-                          <Cell key={i} fill={medalColor(i)} />
+                          <Cell key={i} fill={revenueChartData[i].value < 0 ? '#ef4444' : medalColor(i)} />
                         ))}
                       </Bar>
                       {(revenuePeriod === 'monthly' || revenuePeriod === 'specific') && (
