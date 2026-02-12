@@ -4,9 +4,20 @@ import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import momentTimezonePlugin from '@fullcalendar/moment-timezone';
 import type { DatesSetArg, EventClickArg, EventContentArg, EventDropArg, DateSelectArg } from '@fullcalendar/core';
 import type { EventResizeDoneArg } from '@fullcalendar/interaction';
 import { timeBlocksApi, parseSummary } from '../../api/client';
+import {
+  dateInAppTzToUTC,
+  formatDateTimeInAppTz,
+  getMonthEndISO,
+  getMonthStartISO,
+  getTodayEndISO,
+  getTodayStartISO,
+  getWeekEndISO,
+  getWeekStartISO,
+} from '../../utils/datetime';
 import { useAuth } from '../../context/AuthContext';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import EditBlockModal from './EditBlockModal';
@@ -72,9 +83,8 @@ export default function TimeRecord() {
   const handleDatesSet = useCallback(
     (arg: DatesSetArg) => {
       setViewRange({ start: arg.start, end: arg.end });
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const monthStart = new Date(getMonthStartISO());
+      const monthEnd = new Date(getMonthEndISO());
       const fetchStart = arg.start < monthStart ? arg.start : monthStart;
       const fetchEnd = arg.end > monthEnd ? arg.end : monthEnd;
       fetchEvents(fetchStart, fetchEnd);
@@ -101,8 +111,8 @@ export default function TimeRecord() {
     async (arg: DateSelectArg) => {
       setError('');
       setNewlyCreatedBlock(null);
-      const selStartStr = arg.startStr;
-      const selEndStr = arg.endStr;
+      const selStartStr = dateInAppTzToUTC(arg.start);
+      const selEndStr = dateInAppTzToUTC(arg.end);
 
       try {
         const created = await timeBlocksApi.create(selStartStr, selEndStr);
@@ -145,8 +155,8 @@ export default function TimeRecord() {
       setError('');
       try {
         await timeBlocksApi.update(arg.event.id, {
-          startAt: arg.event.start!.toISOString(),
-          endAt: arg.event.end!.toISOString(),
+          startAt: dateInAppTzToUTC(arg.event.start!),
+          endAt: dateInAppTzToUTC(arg.event.end!),
         });
       } catch (e) {
         arg.revert();
@@ -176,8 +186,8 @@ export default function TimeRecord() {
       setError('');
       try {
         await timeBlocksApi.update(arg.event.id, {
-          startAt: arg.event.start!.toISOString(),
-          endAt: arg.event.end!.toISOString(),
+          startAt: dateInAppTzToUTC(arg.event.start!),
+          endAt: dateInAppTzToUTC(arg.event.end!),
         });
       } catch (e) {
         arg.revert();
@@ -235,15 +245,12 @@ export default function TimeRecord() {
   }, [newlyCreatedBlock]);
 
   // Summaries from current events in view (approximate for visible range)
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
-  const weekStart = new Date(todayStart);
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 7);
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const todayStart = new Date(getTodayStartISO());
+  const todayEnd = new Date(getTodayEndISO());
+  const weekStart = new Date(getWeekStartISO());
+  const weekEnd = new Date(getWeekEndISO());
+  const monthStart = new Date(getMonthStartISO());
+  const monthEnd = new Date(getMonthEndISO());
 
   const toMs = (s: string) => new Date(s).getTime();
   const workEventsOnly = (list: typeof events) => list.filter((e) => e.title === 'Work');
@@ -283,8 +290,9 @@ export default function TimeRecord() {
         <div className={styles.calendarWrap}>
           <FullCalendar
             ref={calendarRef}
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            plugins={[momentTimezonePlugin, dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView="timeGridWeek"
+            timeZone="Asia/Yakutsk"
             headerToolbar={{
               left: 'prev,next today',
               center: 'title',
@@ -323,10 +331,11 @@ export default function TimeRecord() {
               const fromCalendar = arg.event.extendedProps as { summary?: string | null; content?: string | null } | undefined;
               const fromOurState = eventsRef.current.find((e) => e.id === arg.event.id)?.extendedProps?.content;
               const content = (fromOurState ?? fromCalendar?.content ?? '').trim();
+              const start = arg.event.start ? formatDateTimeInAppTz(arg.event.start, { hour: 'numeric', minute: '2-digit' }) : arg.timeText;
               return (
                 <div className={styles.eventContent}>
                   <span className={styles.eventTime}>
-                    {arg.timeText}
+                    {start}
                   </span>
                   <span className={styles.eventTitle}>{arg.event.title}</span>
                   {content ? (

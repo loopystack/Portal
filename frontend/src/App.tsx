@@ -10,6 +10,8 @@ import Rankings from './pages/rankings/Rankings';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminTimeSheets from './pages/admin/AdminTimeSheets';
 import AdminRankings from './pages/admin/AdminRankings';
+import AdminRevenueHistory from './pages/admin/AdminRevenueHistory';
+import TeamTimeSheets from './pages/team/TeamTimeSheets';
 
 function App() {
   const { user, loading } = useAuth();
@@ -51,6 +53,14 @@ function App() {
         }
       />
       <Route
+        path="/team-time"
+        element={
+          <ProtectedRoute>
+            <TeamTimeSheets />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/revenue"
         element={
           <ProtectedRoute>
@@ -76,6 +86,7 @@ function App() {
       >
         <Route index element={<AdminTimeSheets />} />
         <Route path="rankings" element={<AdminRankings />} />
+        <Route path="revenue-history" element={<AdminRevenueHistory />} />
       </Route>
       <Route path="*" element={<Navigate to={user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/signin'} replace />} />
     </Routes>

@@ -5,25 +5,42 @@ const pool_1 = require("../db/pool");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 router.use(auth_1.authMiddleware);
-// Helpers for date ranges (server timezone)
-const todayStart = "date_trunc('day', CURRENT_DATE)";
-const todayEnd = "date_trunc('day', CURRENT_DATE) + interval '1 day'";
-const weekStart = "date_trunc('day', CURRENT_DATE) - (EXTRACT(DOW FROM CURRENT_DATE)::int * interval '1 day')";
-const weekEnd = "date_trunc('day', CURRENT_DATE) - (EXTRACT(DOW FROM CURRENT_DATE)::int * interval '1 day') + interval '7 days'";
-const monthStart = "date_trunc('month', CURRENT_DATE)";
-const monthEnd = "date_trunc('month', CURRENT_DATE) + interval '1 month'";
+// Date bounds in app timezone (UTC+9 Asia/Yakutsk) — Node uses TZ=Asia/Yakutsk
+function getWorkHoursRanges() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const d = now.getDate();
+    const dayOfWeek = now.getDay();
+    const todayS = new Date(y, m, d);
+    const todayE = new Date(y, m, d + 1);
+    const weekS = new Date(y, m, d - dayOfWeek);
+    const weekE = new Date(weekS.getTime());
+    weekE.setDate(weekE.getDate() + 7);
+    const monthS = new Date(y, m, 1);
+    const monthE = new Date(y, m + 1, 1);
+    return {
+        todayS: todayS.toISOString(),
+        todayE: todayE.toISOString(),
+        weekS: weekS.toISOString(),
+        weekE: weekE.toISOString(),
+        monthS: monthS.toISOString(),
+        monthE: monthE.toISOString(),
+    };
+}
 // GET /api/rankings/work-hours — all members' work hours (daily, weekly, monthly, total), Work blocks only
 router.get('/work-hours', async (_req, res) => {
     try {
+        const ranges = getWorkHoursRanges();
         const workQuery = `
       WITH ranges AS (
         SELECT
-          ${todayStart} AS today_s,
-          ${todayEnd} AS today_e,
-          ${weekStart} AS week_s,
-          ${weekEnd} AS week_e,
-          ${monthStart} AS month_s,
-          ${monthEnd} AS month_e
+          $1::timestamptz AS today_s,
+          $2::timestamptz AS today_e,
+          $3::timestamptz AS week_s,
+          $4::timestamptz AS week_e,
+          $5::timestamptz AS month_s,
+          $6::timestamptz AS month_e
       ),
       blocks AS (
         SELECT
@@ -60,7 +77,14 @@ router.get('/work-hours', async (_req, res) => {
       FROM blocks
       GROUP BY user_id
     `;
-        const { rows: workRows } = await pool_1.pool.query(workQuery);
+        const { rows: workRows } = await pool_1.pool.query(workQuery, [
+            ranges.todayS,
+            ranges.todayE,
+            ranges.weekS,
+            ranges.weekE,
+            ranges.monthS,
+            ranges.monthE,
+        ]);
         const { rows: users } = await pool_1.pool.query("SELECT id, display_name, email FROM users WHERE role = 'member' ORDER BY display_name NULLS LAST, email");
         const workByUser = new Map(workRows.map((r) => [r.user_id, r]));
         const result = users.map((u) => {

@@ -14,6 +14,7 @@ import {
   Cell,
 } from 'recharts';
 import { rankingsApi, type WorkHoursRankItem, type RevenueRankItem } from '../../api/client';
+import { getAppLocalParts } from '../../utils/datetime';
 import { useAuth } from '../../context/AuthContext';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import styles from './Rankings.module.css';
@@ -26,8 +27,8 @@ type RevenuePeriod = (typeof REVENUE_PERIODS)[number];
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 function getYears(): number[] {
-  const y = new Date().getFullYear();
-  return [y, y - 1, y - 2, y - 3, y - 4];
+  const { year } = getAppLocalParts();
+  return [year, year - 1, year - 2, year - 3, year - 4];
 }
 
 function formatHours(h: number): string {
@@ -55,12 +56,16 @@ export default function Rankings() {
   const [workHours, setWorkHours] = useState<WorkHoursRankItem[]>([]);
   const [revenue, setRevenue] = useState<RevenueRankItem[]>([]);
   const [revenueForMonth, setRevenueForMonth] = useState<RevenueRankItem[] | null>(null);
+  const [tableRevenue, setTableRevenue] = useState<RevenueRankItem[] | null>(null);
   const [workPeriod, setWorkPeriod] = useState<WorkPeriod>('total');
   const [revenuePeriod, setRevenuePeriod] = useState<RevenuePeriod>('monthly');
-  const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState<number>(() => new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(() => getAppLocalParts().year);
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => getAppLocalParts().month);
+  const [tableYear, setTableYear] = useState<number>(() => getAppLocalParts().year);
+  const [tableMonth, setTableMonth] = useState<number>(() => getAppLocalParts().month);
   const [loading, setLoading] = useState(true);
   const [revenueLoading, setRevenueLoading] = useState(false);
+  const [tableRevenueLoading, setTableRevenueLoading] = useState(false);
   const [error, setError] = useState('');
 
   const fetchRankings = useCallback(async () => {
@@ -83,6 +88,18 @@ export default function Rankings() {
     fetchRankings();
   }, [fetchRankings]);
 
+  const fetchRevenueTable = useCallback(async (year: number, month: number) => {
+    setTableRevenueLoading(true);
+    try {
+      const rev = await rankingsApi.revenue(year, month);
+      setTableRevenue(rev);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load revenue table');
+    } finally {
+      setTableRevenueLoading(false);
+    }
+  }, []);
+
   const fetchRevenueForMonth = useCallback(async (year: number, month: number) => {
     setRevenueLoading(true);
     try {
@@ -102,6 +119,10 @@ export default function Rankings() {
       setRevenueForMonth(null);
     }
   }, [revenuePeriod, selectedYear, selectedMonth, fetchRevenueForMonth]);
+
+  useEffect(() => {
+    fetchRevenueTable(tableYear, tableMonth);
+  }, [tableYear, tableMonth, fetchRevenueTable]);
 
   const workHoursKey = workPeriod === 'daily' ? 'dailyHours' : workPeriod === 'weekly' ? 'weeklyHours' : workPeriod === 'monthly' ? 'monthlyHours' : 'totalHours';
   const workChartData = workHours.map((r, i) => ({
@@ -314,31 +335,65 @@ export default function Rankings() {
 
             {/* Revenue table */}
             <section className={styles.tableCard}>
-              <h3>Revenue — ranking table</h3>
-              <p className={styles.cardSub}>This month · Total · Expected (target) this month</p>
-              <div className={styles.tableWrap}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Member</th>
-                      <th>Monthly</th>
-                      <th>Total</th>
-                      <th>Expected</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {revenue.map((r, i) => (
-                      <tr key={r.userId}>
-                        <td className={styles.rankCell}>{i + 1}</td>
-                        <td className={styles.nameCell}>{r.displayName}</td>
-                        <td>{formatMoney(r.monthlyRevenue)}</td>
-                        <td className={styles.totalCell}>{formatMoney(r.totalRevenue)}</td>
-                        <td>{r.expectedRevenue != null ? formatMoney(r.expectedRevenue) : '—'}</td>
-                      </tr>
+              <div className={styles.tableHeader}>
+                <h3>Revenue — ranking table</h3>
+                <div className={styles.monthPicker}>
+                  <select
+                    value={tableYear}
+                    onChange={(e) => setTableYear(Number(e.target.value))}
+                    className={styles.monthSelect}
+                    aria-label="Year for revenue table"
+                  >
+                    {getYears().map((y) => (
+                      <option key={y} value={y}>{y}</option>
                     ))}
-                  </tbody>
-                </table>
+                  </select>
+                  <select
+                    value={tableMonth}
+                    onChange={(e) => setTableMonth(Number(e.target.value))}
+                    className={styles.monthSelect}
+                    aria-label="Month for revenue table"
+                  >
+                    {MONTH_NAMES.map((name, i) => (
+                      <option key={name} value={i + 1}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <p className={styles.cardSub}>
+                Monthly and expected for selected month · Total is all time
+              </p>
+              <div className={styles.tableWrap}>
+                {tableRevenueLoading && !tableRevenue ? (
+                  <p className={styles.loading}>
+                    Loading revenue table for {MONTH_NAMES[tableMonth - 1]} {tableYear}…
+                  </p>
+                ) : (
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Member</th>
+                        <th>Monthly</th>
+                        <th>Expected</th>
+                        <th>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(tableRevenue ?? revenue).map((r, i) => (
+                        <tr key={r.userId}>
+                          <td className={styles.rankCell}>
+                            {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                          </td>
+                          <td className={styles.nameCell}>{r.displayName}</td>
+                          <td>{formatMoney(r.monthlyRevenue)}</td>
+                          <td>{r.expectedRevenue != null ? formatMoney(r.expectedRevenue) : '—'}</td>
+                          <td className={styles.totalCell}>{formatMoney(r.totalRevenue)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </section>
           </div>

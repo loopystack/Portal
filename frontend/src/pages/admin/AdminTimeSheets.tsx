@@ -1,11 +1,24 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import momentTimezonePlugin from '@fullcalendar/moment-timezone';
 import type { DatesSetArg, EventContentArg } from '@fullcalendar/core';
 import { adminApi, timeBlocksApi, parseSummary } from '../../api/client';
+import {
+  formatDateTimeInAppTz,
+  getMonthEndISO,
+  getMonthStartISO,
+  getTodayEndISO,
+  getTodayStartISO,
+  getWeekEndISO,
+  getWeekStartISO,
+} from '../../utils/datetime';
 import type { AdminMember } from '../../api/client';
+
+export type MembersFetcher = () => Promise<AdminMember[]>;
 import styles from './Admin.module.css';
 import calendarStyles from '../time-record/TimeRecord.module.css';
 
@@ -25,25 +38,37 @@ function formatHours(ms: number): string {
   return `${h}h ${m}m`;
 }
 
-export default function AdminTimeSheets() {
+interface AdminTimeSheetsProps {
+  /** When provided (e.g. on team-time page), use this instead of admin API so any user can load members */
+  membersFetcher?: MembersFetcher;
+  /** When true (e.g. team-time page), layout fills viewport and calendar/summaries are larger */
+  fullPage?: boolean;
+}
+
+export default function AdminTimeSheets({ membersFetcher, fullPage }: AdminTimeSheetsProps = {}) {
   const [members, setMembers] = useState<AdminMember[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [viewRange, setViewRange] = useState<{ start: Date; end: Date } | null>(null);
+  const [hoverPreview, setHoverPreview] = useState<{ title: string; content: string; left: number; top: number } | null>(null);
   const eventsRef = useRef<CalendarEvent[]>([]);
   eventsRef.current = events;
 
+  const fetchMembers = useMemo(
+    () => membersFetcher ?? (() => adminApi.listMembers()),
+    [membersFetcher]
+  );
+
   useEffect(() => {
-    adminApi
-      .listMembers()
+    fetchMembers()
       .then((list) => {
         setMembers(list);
-        if (list.length > 0 && !selectedUserId) setSelectedUserId(list[0].id);
+        if (list.length > 0) setSelectedUserId((prev) => prev || list[0].id);
       })
       .catch(() => setMembers([]));
-  }, []);
+  }, [fetchMembers]);
 
   const fetchEvents = useCallback(
     async (start: Date, end: Date) => {
@@ -82,9 +107,8 @@ export default function AdminTimeSheets() {
   const handleDatesSet = useCallback(
     (arg: DatesSetArg) => {
       setViewRange({ start: arg.start, end: arg.end });
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const monthStart = new Date(getMonthStartISO());
+      const monthEnd = new Date(getMonthEndISO());
       const fetchStart = arg.start < monthStart ? arg.start : monthStart;
       const fetchEnd = arg.end > monthEnd ? arg.end : monthEnd;
       fetchEvents(fetchStart, fetchEnd);
@@ -97,39 +121,28 @@ export default function AdminTimeSheets() {
     fetchEvents(viewRange.start, viewRange.end);
   }, [selectedUserId]); // eslint-disable-line react-hooks/exhaustive-deps -- refetch when member changes only
 
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
-  const weekStart = new Date(todayStart);
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 7);
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const todayStart = new Date(getTodayStartISO());
+  const todayEnd = new Date(getTodayEndISO());
+  const weekStart = new Date(getWeekStartISO());
+  const weekEnd = new Date(getWeekEndISO());
+  const monthStart = new Date(getMonthStartISO());
+  const monthEnd = new Date(getMonthEndISO());
   const toMs = (s: string) => new Date(s).getTime();
   const workEventsOnly = (list: CalendarEvent[]) => list.filter((e) => e.title === 'Work');
-  const dailyMs = workEventsOnly(events).reduce(
-    (sum, e) =>
-      sum +
-      Math.min(toMs(e.end), todayEnd.getTime()) - Math.max(toMs(e.start), todayStart.getTime()),
-    0
-  );
-  const weeklyMs = workEventsOnly(events).reduce(
-    (sum, e) =>
-      sum +
-      Math.min(toMs(e.end), weekEnd.getTime()) - Math.max(toMs(e.start), weekStart.getTime()),
-    0
-  );
-  const monthlyMs = workEventsOnly(events).reduce(
-    (sum, e) =>
-      sum +
-      Math.min(toMs(e.end), monthEnd.getTime()) - Math.max(toMs(e.start), monthStart.getTime()),
-    0
-  );
+  // Same calculation as Time Record page: filter to events overlapping the period, then sum only the overlapping portion
+  const dailyMs = workEventsOnly(events)
+    .filter((e) => toMs(e.end) > todayStart.getTime() && toMs(e.start) < todayEnd.getTime())
+    .reduce((sum, e) => sum + Math.min(toMs(e.end), todayEnd.getTime()) - Math.max(toMs(e.start), todayStart.getTime()), 0);
+  const weeklyMs = workEventsOnly(events)
+    .filter((e) => toMs(e.end) > weekStart.getTime() && toMs(e.start) < weekEnd.getTime())
+    .reduce((sum, e) => sum + Math.min(toMs(e.end), weekEnd.getTime()) - Math.max(toMs(e.start), weekStart.getTime()), 0);
+  const monthlyMs = workEventsOnly(events)
+    .filter((e) => toMs(e.end) > monthStart.getTime() && toMs(e.start) < monthEnd.getTime())
+    .reduce((sum, e) => sum + Math.min(toMs(e.end), monthEnd.getTime()) - Math.max(toMs(e.start), monthStart.getTime()), 0);
 
   const selectedMember = members.find((m) => m.id === selectedUserId);
 
-  return (
+  const content = (
     <>
       <header className={styles.pageHeader}>
         <h1>Time sheets</h1>
@@ -158,8 +171,9 @@ export default function AdminTimeSheets() {
         <div className={styles.calendarWrap}>
           {selectedUserId ? (
             <FullCalendar
-              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+              plugins={[momentTimezonePlugin, dayGridPlugin, timeGridPlugin, interactionPlugin]}
               initialView="timeGridWeek"
+              timeZone="Asia/Yakutsk"
               headerToolbar={{
                 left: 'prev,next today',
                 center: 'title',
@@ -178,13 +192,31 @@ export default function AdminTimeSheets() {
                 const fromOurState = eventsRef.current.find((e) => e.id === arg.event.id)?.extendedProps?.content;
                 const fromCalendar = arg.event.extendedProps as { content?: string } | undefined;
                 const content = (fromOurState ?? fromCalendar?.content ?? '').trim();
+                const previewTitle = arg.event.title || arg.timeText;
+                const previewContent = content || '(no description)';
                 return (
-                  <div className={calendarStyles.eventContent}>
-                    <span className={calendarStyles.eventTime}>{arg.timeText}</span>
-                    <span className={calendarStyles.eventTitle}>{arg.event.title}</span>
-                    {content ? (
-                      <span className={calendarStyles.eventBlockContent}>{content}</span>
-                    ) : null}
+                  <div
+                    className={styles.eventWithTooltip}
+                    onMouseEnter={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setHoverPreview({
+                        title: previewTitle,
+                        content: previewContent,
+                        left: rect.right + 8,
+                        top: rect.top,
+                      });
+                    }}
+                    onMouseLeave={() => setHoverPreview(null)}
+                  >
+                    <div className={calendarStyles.eventContent}>
+                      <span className={calendarStyles.eventTime}>
+                      {arg.event.start ? formatDateTimeInAppTz(arg.event.start, { hour: 'numeric', minute: '2-digit' }) : arg.timeText}
+                    </span>
+                      <span className={calendarStyles.eventTitle}>{arg.event.title}</span>
+                      {content ? (
+                        <span className={calendarStyles.eventBlockContent}>{content}</span>
+                      ) : null}
+                    </div>
                   </div>
                 );
               }}
@@ -212,6 +244,20 @@ export default function AdminTimeSheets() {
           </div>
         </aside>
       </div>
+      {hoverPreview &&
+        createPortal(
+          <div
+            className={`${styles.eventTooltip} ${styles.eventTooltipPortal}`}
+            style={{ position: 'fixed', left: hoverPreview.left, top: hoverPreview.top }}
+            role="tooltip"
+          >
+            <div className={styles.eventTooltipTitle}>{hoverPreview.title}</div>
+            <div className={styles.eventTooltipContent}>{hoverPreview.content}</div>
+          </div>,
+          document.body
+        )}
     </>
   );
+
+  return fullPage ? <div className={styles.fullPageContent}>{content}</div> : content;
 }

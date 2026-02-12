@@ -10,6 +10,15 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { timeBlocksApi, parseSummary, revenueApi, rankingsApi } from '../../api/client';
+import {
+  formatDateTimeInAppTz,
+  getAppLocalParts,
+  getMonthEndISO,
+  getMonthStartISO,
+  getTodayEndISO,
+  getTodayStartISO,
+  getWeekStartISO,
+} from '../../utils/datetime';
 import type { TimeBlockResponse, RevenueEntryResponse, WorkHoursRankItem, RevenueRankItem } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { ThemeToggle } from '../../components/ThemeToggle';
@@ -69,14 +78,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     let cancelled = false;
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const weekStart = new Date(todayStart);
-    weekStart.setDate(weekStart.getDate() - 6);
-    weekStart.setHours(0, 0, 0, 0);
+    const todayStart = new Date(getTodayStartISO());
+    const todayEnd = new Date(getTodayEndISO());
+    const monthStart = new Date(getMonthStartISO());
+    const monthEnd = new Date(getMonthEndISO());
+    const weekStart = new Date(getWeekStartISO());
 
     const from = weekStart.toISOString();
     const to = monthEnd.toISOString();
@@ -118,8 +124,7 @@ export default function Dashboard() {
 
         const chartData: { day: string; hours: number; label: string }[] = [];
         for (let i = 0; i < 7; i++) {
-          const d = new Date(weekStart);
-          d.setDate(d.getDate() + i);
+          const d = new Date(weekStart.getTime() + i * 24 * 60 * 60 * 1000);
           const dayEnd = new Date(d.getTime() + 24 * 60 * 60 * 1000);
           const ms = workOnly
             .filter((b) => toMs(b.endAt) > d.getTime() && toMs(b.startAt) < dayEnd.getTime())
@@ -128,10 +133,11 @@ export default function Dashboard() {
                 sum + Math.min(toMs(b.endAt), dayEnd.getTime()) - Math.max(toMs(b.startAt), d.getTime()),
               0
             );
+          const dayOfWeek = new Date(d.getTime() + 9 * 60 * 60 * 1000).getUTCDay();
           chartData.push({
-            day: DAY_NAMES[d.getDay()],
+            day: DAY_NAMES[dayOfWeek],
             hours: Math.round((ms / (1000 * 60 * 60)) * 10) / 10,
-            label: `${DAY_NAMES[d.getDay()]} ${formatHours(ms)}`,
+            label: `${DAY_NAMES[dayOfWeek]} ${formatHours(ms)}`,
           });
         }
         setWeekChartData(chartData);
@@ -155,15 +161,15 @@ export default function Dashboard() {
 
   useEffect(() => {
     let cancelled = false;
-    const now = new Date();
-    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    const monthEndStr = monthEnd.toISOString().slice(0, 10);
+    const { year, month } = getAppLocalParts();
+    const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const monthEndStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
     const farPast = '2000-01-01';
 
     Promise.all([
       revenueApi.listEntries(farPast, monthEndStr),
-      revenueApi.getExpected(now.getFullYear(), now.getMonth() + 1),
+      revenueApi.getExpected(year, month),
     ])
       .then(([entries, expected]) => {
         if (cancelled) return;
@@ -224,7 +230,7 @@ export default function Dashboard() {
     navigate('/signin', { replace: true });
   };
 
-  const welcomeDate = new Date().toLocaleDateString(undefined, {
+  const welcomeDate = formatDateTimeInAppTz(new Date(), {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -263,6 +269,10 @@ export default function Dashboard() {
             <p className={styles.welcomeSub}>Here’s your overview — everything in one place.</p>
           </div>
           <div className={styles.quickActions}>
+            <Link to="/team-time" className={styles.quickBtn}>
+              <span className={styles.quickBtnIcon}>👥</span>
+              Team time logs
+            </Link>
             <Link to="/time-record" className={styles.quickBtn}>
               <span className={styles.quickBtnIcon}>⏱</span>
               Log time
@@ -382,8 +392,8 @@ export default function Dashboard() {
                     const label = BLOCK_TITLES[title] ?? title;
                     const start = new Date(b.startAt);
                     const end = new Date(b.endAt);
-                    const dateStr = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-                    const timeStr = `${start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })} – ${end.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
+                    const dateStr = formatDateTimeInAppTz(start, { month: 'short', day: 'numeric' });
+                    const timeStr = `${formatDateTimeInAppTz(start, { hour: 'numeric', minute: '2-digit' })} – ${formatDateTimeInAppTz(end, { hour: 'numeric', minute: '2-digit' })}`;
                     return (
                       <li key={b.id} className={styles.recentItem}>
                         <span className={styles.recentItemType}>{label}</span>
@@ -407,7 +417,9 @@ export default function Dashboard() {
                 <ul className={styles.recentList}>
                   {recentEntries.map((e) => (
                     <li key={e.id} className={styles.recentItem}>
-                      <span className={styles.recentItemAmount}>{formatMoney(e.amount)}</span>
+                      <span className={e.amount < 0 ? styles.recentItemAmountNegative : styles.recentItemAmount}>
+                        {formatMoney(e.amount)}
+                      </span>
                       <span className={styles.recentItemMeta}>
                         {e.date} {e.note ? `· ${e.note}` : ''}
                       </span>

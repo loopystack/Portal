@@ -278,17 +278,34 @@
   grid-area: tableRevenue;
 }
 
-.tableCard h3 {
-  margin: 0 0 0.2rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
 .cardSub {
   margin: 0 0 0.75rem;
   font-size: 0.8rem;
   color: var(--text-muted);
+}
+
+.historyLink {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.historyLink:hover {
+  text-decoration: underline;
+}
+
+.tableHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.tableHeader h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
 }
 
 .tableWrap {

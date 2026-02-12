@@ -3,6 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+// All members use the same fixed timezone: UTC+9 (Asia/Yakutsk)
+process.env.TZ = 'Asia/Yakutsk';
 const express_1 = __importDefault(require("express"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
@@ -13,6 +15,7 @@ const timeBlocks_1 = __importDefault(require("./routes/timeBlocks"));
 const revenue_1 = __importDefault(require("./routes/revenue"));
 const rankings_1 = __importDefault(require("./routes/rankings"));
 const admin_1 = __importDefault(require("./routes/admin"));
+const team_1 = __importDefault(require("./routes/team"));
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)({ origin: true, credentials: true }));
 app.use(express_1.default.json());
@@ -21,6 +24,7 @@ app.use('/api/time-blocks', timeBlocks_1.default);
 app.use('/api/revenue', revenue_1.default);
 app.use('/api/rankings', rankings_1.default);
 app.use('/api/admin', admin_1.default);
+app.use('/api/team', team_1.default);
 app.get('/api/health', (_req, res) => {
     res.json({ ok: true });
 });

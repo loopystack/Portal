@@ -27,9 +27,16 @@ router.get('/', (0, express_validator_1.query)('from').isISO8601(), (0, express_
         }
         const from = req.query.from;
         const to = req.query.to;
-        const targetUserId = req.user.role === 'admin' && typeof req.query.userId === 'string'
-            ? req.query.userId
-            : req.user.userId;
+        const requestedUserId = typeof req.query.userId === 'string' ? req.query.userId : null;
+        let targetUserId = req.user.userId;
+        if (requestedUserId && req.user.role === 'admin') {
+            targetUserId = requestedUserId;
+        }
+        else if (requestedUserId && req.user.role === 'member') {
+            const { rows: target } = await pool_1.pool.query('SELECT role FROM users WHERE id = $1', [requestedUserId]);
+            if (target.length > 0 && target[0].role === 'member')
+                targetUserId = requestedUserId;
+        }
         const { rows } = await pool_1.pool.query(`SELECT id, user_id, start_at, end_at, summary, created_at, updated_at
          FROM time_blocks
          WHERE user_id = $1 AND end_at > $2 AND start_at < $3

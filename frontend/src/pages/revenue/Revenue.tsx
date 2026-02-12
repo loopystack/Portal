@@ -13,6 +13,7 @@ import {
   ComposedChart,
 } from 'recharts';
 import { revenueApi, type RevenueEntryResponse } from '../../api/client';
+import { getAppLocalParts, getTodayInAppTz } from '../../utils/datetime';
 import { useAuth } from '../../context/AuthContext';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import styles from './Revenue.module.css';
@@ -24,7 +25,7 @@ function formatMoney(n: number): string {
 }
 
 function toYMD(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Yakutsk' });
 }
 
 export default function Revenue() {
@@ -33,21 +34,21 @@ export default function Revenue() {
   const name = user?.display_name || user?.email || 'Member';
 
   const [entries, setEntries] = useState<RevenueEntryResponse[]>([]);
-  const [expectedMonth, setExpectedMonth] = useState(() => new Date().getMonth() + 1);
-  const [expectedYear, setExpectedYear] = useState(() => new Date().getFullYear());
+  const [expectedMonth, setExpectedMonth] = useState(() => getAppLocalParts().month);
+  const [expectedYear, setExpectedYear] = useState(() => getAppLocalParts().year);
   const [expectedAmount, setExpectedAmount] = useState<number | null>(null);
   const [expectedInput, setExpectedInput] = useState('');
   const [expectedSaving, setExpectedSaving] = useState(false);
-  const [entryDate, setEntryDate] = useState(toYMD(new Date()));
+  const [entryDate, setEntryDate] = useState(getTodayInAppTz());
   const [entryAmount, setEntryAmount] = useState('');
   const [entryNote, setEntryNote] = useState('');
   const [entrySubmitting, setEntrySubmitting] = useState(false);
   const [historyFrom, setHistoryFrom] = useState(() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() - 11);
-    return toYMD(d);
+    const { year, month, day } = getAppLocalParts();
+    const past = new Date(year, month - 1 - 11, day);
+    return toYMD(past);
   });
-  const [historyTo, setHistoryTo] = useState(toYMD(new Date()));
+  const [historyTo, setHistoryTo] = useState(getTodayInAppTz());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -114,8 +115,12 @@ export default function Revenue() {
   const handleAddEntry = async (e: React.FormEvent) => {
     e.preventDefault();
     const amount = parseFloat(entryAmount);
-    if (Number.isNaN(amount) || amount <= 0) {
-      setError('Enter a valid amount');
+    if (Number.isNaN(amount) || amount === 0) {
+      setError('Enter a valid amount (positive for received, negative for deductions)');
+      return;
+    }
+    if (!entryNote.trim()) {
+      setError('Please enter a note for this revenue (e.g. client or cost reason).');
       return;
     }
     setError('');
@@ -124,7 +129,7 @@ export default function Revenue() {
       await revenueApi.createEntry(entryDate, amount, entryNote.trim() || undefined);
       setEntryAmount('');
       setEntryNote('');
-      setEntryDate(toYMD(new Date()));
+      setEntryDate(getTodayInAppTz());
       const from = historyFrom <= entryDate ? historyFrom : entryDate;
       const to = historyTo >= entryDate ? historyTo : entryDate;
       if (from !== historyFrom || to !== historyTo) {
@@ -160,8 +165,8 @@ export default function Revenue() {
     e.preventDefault();
     if (!editingId) return;
     const amount = parseFloat(editAmount);
-    if (Number.isNaN(amount) || amount <= 0) {
-      setError('Enter a valid amount');
+    if (Number.isNaN(amount) || amount === 0) {
+      setError('Enter a valid amount (positive or negative)');
       return;
     }
     setError('');
@@ -195,8 +200,8 @@ export default function Revenue() {
     calendarDays.push({ date, day: d, amount: byDay[date] ?? 0 });
   }
 
-  const thisYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1; // 1–12
+  const thisYear = getAppLocalParts().year;
+  const currentMonth = getAppLocalParts().month; // 1–12
   const thisYearMonths: { month: string; year: number; monthNum: number; revenue: number; expected: number }[] = [];
   for (let m = 1; m <= currentMonth; m++) {
     const monthStart = toYMD(new Date(thisYear, m - 1, 1));
@@ -344,8 +349,10 @@ export default function Revenue() {
           </section>
 
           <section className={styles.cardAdd}>
-            <h3>Add received</h3>
-            <p className={styles.cardDesc}>Record money received</p>
+            <h3>Add received / deduction</h3>
+            <p className={styles.cardDesc}>
+              Positive = money received. Negative = deduction (e.g. server, AI tools, costs).
+            </p>
             <form onSubmit={handleAddEntry} className={styles.entryForm}>
               <label className={styles.label}>
                 Date
@@ -360,11 +367,10 @@ export default function Revenue() {
                 Amount ($)
                 <input
                   type="number"
-                  min={0.01}
                   step={0.01}
                   value={entryAmount}
                   onChange={(e) => setEntryAmount(e.target.value)}
-                  placeholder="0"
+                  placeholder="e.g. 100 or -50"
                   required
                   className={styles.input}
                 />
@@ -375,7 +381,8 @@ export default function Revenue() {
                   type="text"
                   value={entryNote}
                   onChange={(e) => setEntryNote(e.target.value)}
-                  placeholder="Optional"
+                  placeholder="e.g. Client X / Server costs"
+                  required
                   className={styles.input}
                 />
               </label>
@@ -419,7 +426,11 @@ export default function Revenue() {
                   {cell.date ? (
                     <>
                       <span className={styles.calendarDayNum}>{cell.day}</span>
-                      {cell.amount > 0 && <span className={styles.calendarAmount}>{formatMoney(cell.amount)}</span>}
+                      {cell.amount !== 0 && (
+                        <span className={cell.amount < 0 ? styles.calendarAmountNegative : styles.calendarAmount}>
+                          {formatMoney(cell.amount)}
+                        </span>
+                      )}
                     </>
                   ) : null}
                 </div>
@@ -445,7 +456,7 @@ export default function Revenue() {
                   <li key={entry.id} className={styles.historyItem}>
                     {editingId === entry.id ? (
                       <form onSubmit={handleSaveEdit} className={styles.inlineForm}>
-                        <input type="number" min={0.01} step={0.01} value={editAmount} onChange={(e) => setEditAmount(e.target.value)} className={styles.input} />
+                        <input type="number" step={0.01} value={editAmount} onChange={(e) => setEditAmount(e.target.value)} placeholder="+ or -" className={styles.input} />
                         <input type="text" value={editNote} onChange={(e) => setEditNote(e.target.value)} placeholder="Note" className={styles.input} />
                         <button type="submit" className={styles.btnSmall}>Save</button>
                         <button type="button" onClick={handleCancelEdit} className={styles.btnSmallSecondary}>Cancel</button>
@@ -453,7 +464,7 @@ export default function Revenue() {
                     ) : (
                       <>
                         <span className={styles.historyDate}>{entry.date}</span>
-                        <span className={styles.historyAmount}>{formatMoney(entry.amount)}</span>
+                        <span className={entry.amount < 0 ? styles.historyAmountNegative : styles.historyAmount}>{formatMoney(entry.amount)}</span>
                         {entry.note && <span className={styles.historyNote}>{entry.note}</span>}
                         <button type="button" onClick={() => handleStartEdit(entry)} className={styles.btnSmallSecondary}>Edit</button>
                         <button type="button" onClick={() => handleDeleteEntry(entry.id)} className={styles.btnDangerSmall}>Del</button>

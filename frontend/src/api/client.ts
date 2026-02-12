@@ -101,8 +101,10 @@ export interface ExpectedRevenueResponse {
 }
 
 export const revenueApi = {
-  listEntries: (from: string, to: string) =>
-    api<RevenueEntryResponse[]>(`/revenue/entries?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+  listEntries: (from: string, to: string, userId?: string) =>
+    api<RevenueEntryResponse[]>(
+      `/revenue/entries?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}${userId ? `&userId=${encodeURIComponent(userId)}` : ''}`
+    ),
   createEntry: (date: string, amount: number, note?: string) =>
     api<RevenueEntryResponse>('/revenue/entries', {
       method: 'POST',
@@ -163,4 +165,8 @@ export interface AdminMember {
 
 export const adminApi = {
   listMembers: () => api<AdminMember[]>('/admin/members'),
+};
+
+export const teamApi = {
+  listMembers: () => api<AdminMember[]>('/team/members'),
 };

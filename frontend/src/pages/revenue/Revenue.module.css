@@ -313,6 +313,11 @@
   box-sizing: border-box;
 }
 
+/* Make date picker icon visible on dark background */
+.input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
 .inputNum {
   width: 4rem;
   padding: 0.45rem 0.5rem;
@@ -412,6 +417,13 @@
   line-height: 1.1;
 }
 
+.calendarAmountNegative {
+  font-size: 0.65rem;
+  color: var(--error);
+  font-weight: 500;
+  line-height: 1.1;
+}
+
 /* History: scrollable list */
 .historyFilters {
   display: flex;
@@ -466,6 +478,12 @@
 .historyAmount {
   min-width: 64px;
   color: var(--success);
+  font-weight: 600;
+}
+
+.historyAmountNegative {
+  min-width: 64px;
+  color: var(--error);
   font-weight: 600;
 }
 

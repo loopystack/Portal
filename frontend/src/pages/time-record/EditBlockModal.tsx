@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { timeBlocksApi, combineSummary } from '../../api/client';
+import { formatDateTimeInAppTz } from '../../utils/datetime';
 import styles from './EditBlockModal.module.css';
 
 const RECORD_TITLES = ['Work', 'Sleep', 'Idle', 'Absent'] as const;
@@ -64,7 +65,8 @@ export default function EditBlockModal({ id, start, end, summary, content: initi
 
   const startDate = new Date(start);
   const endDate = new Date(end);
-  const timeStr = (d: Date) => d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
+  const timeStr = (d: Date) =>
+    formatDateTimeInAppTz(d, { dateStyle: 'short', timeStyle: 'short' });
 
   return (
     <div className={styles.overlay} onClick={onClose}>

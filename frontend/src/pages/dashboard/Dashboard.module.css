@@ -419,6 +419,11 @@
   color: var(--success);
 }
 
+.recentItemAmountNegative {
+  font-weight: 700;
+  color: var(--error);
+}
+
 .recentItemMeta {
   color: var(--text-muted);
   font-size: 0.85rem;

@@ -1,0 +1,19 @@
+/* Team time page: content grows so only the page scrollbar is used */
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main {
+  flex: 1;
+  display: block;
+  max-width: none;
+  padding: 1.25rem 1.5rem;
+  overflow: visible;
+}
+
+.contentFill {
+  display: block;
+  overflow: visible;
+}

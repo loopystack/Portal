@@ -1,3 +1,6 @@
+// All members use the same fixed timezone: UTC+9 (Asia/Yakutsk)
+process.env.TZ = 'Asia/Yakutsk';
+
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -8,6 +11,7 @@ import timeBlocksRoutes from './routes/timeBlocks';
 import revenueRoutes from './routes/revenue';
 import rankingsRoutes from './routes/rankings';
 import adminRoutes from './routes/admin';
+import teamRoutes from './routes/team';
 
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
@@ -18,6 +22,7 @@ app.use('/api/time-blocks', timeBlocksRoutes);
 app.use('/api/revenue', revenueRoutes);
 app.use('/api/rankings', rankingsRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/team', teamRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true });

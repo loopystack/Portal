@@ -50,11 +50,12 @@ function toExpected(row: ExpectedRevenueRow) {
   };
 }
 
-// List revenue entries in date range
+// List revenue entries in date range. Admin may pass ?userId= to list that user's entries.
 router.get(
   '/entries',
   query('from').isISO8601(),
   query('to').isISO8601(),
+  query('userId').optional().trim().notEmpty(),
   async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
@@ -64,7 +65,14 @@ router.get(
       }
       const from = (req.query.from as string).slice(0, 10);
       const to = (req.query.to as string).slice(0, 10);
-      const userId = req.user!.userId;
+      const isAdmin = req.user!.role === 'admin';
+      const requestedUserId = req.query.userId;
+      const userIdParam = typeof requestedUserId === 'string'
+        ? requestedUserId
+        : Array.isArray(requestedUserId) && requestedUserId.length > 0
+          ? requestedUserId[0]
+          : null;
+      const userId = (isAdmin && userIdParam) ? userIdParam : req.user!.userId;
       const { rows } = await pool.query<RevenueEntryRow>(
         `SELECT id, user_id, amount, date, note, created_at, updated_at
          FROM revenue_entries
@@ -83,11 +91,11 @@ router.get(
   }
 );
 
-// Create revenue entry
+// Create revenue entry (amount can be negative for deductions e.g. server costs, tools)
 router.post(
   '/entries',
   body('date').isISO8601(),
-  body('amount').isFloat({ min: 0 }).toFloat(),
+  body('amount').isFloat().toFloat(),
   body('note').optional().trim().isLength({ max: 2000 }),
   async (req: Request, res: Response) => {
     try {
@@ -122,7 +130,7 @@ router.patch(
   '/entries/:id',
   param('id').isUUID(),
   body('date').optional().isISO8601().toDate(),
-  body('amount').optional().isFloat({ min: 0 }).toFloat(),
+  body('amount').optional().isFloat().toFloat(),
   body('note').optional().trim().isLength({ max: 2000 }),
   async (req: Request, res: Response) => {
     try {
@@ -138,7 +146,11 @@ router.patch(
       let i = 1;
       if (req.body.date !== undefined) {
         updates.push(`date = $${i++}`);
-        values.push((req.body.date as string).slice(0, 10));
+        const dateVal = req.body.date;
+        const dateStr = dateVal instanceof Date
+          ? dateVal.toISOString().slice(0, 10)
+          : String(dateVal).slice(0, 10);
+        values.push(dateStr);
       }
       if (req.body.amount !== undefined) {
         updates.push(`amount = $${i++}`);
@@ -153,6 +165,21 @@ router.patch(
         return;
       }
       updates.push('updated_at = NOW()');
+      const isAdmin = req.user!.role === 'admin';
+      if (isAdmin) {
+        values.push(id);
+        const { rows } = await pool.query<RevenueEntryRow>(
+          `UPDATE revenue_entries SET ${updates.join(', ')}
+           WHERE id = $${i}
+           RETURNING id, user_id, amount, date, note, created_at, updated_at`,
+          values
+        );
+        if (rows.length === 0) {
+          res.status(404).json({ error: 'Revenue entry not found' });
+          return;
+        }
+        return res.json(toEntry(rows[0]));
+      }
       values.push(id, userId);
       const { rows } = await pool.query<RevenueEntryRow>(
         `UPDATE revenue_entries SET ${updates.join(', ')}
@@ -188,9 +215,12 @@ router.delete(
       }
       const id = req.params.id;
       const userId = req.user!.userId;
+      const isAdmin = req.user!.role === 'admin';
       const { rowCount } = await pool.query(
-        'DELETE FROM revenue_entries WHERE id = $1 AND user_id = $2',
-        [id, userId]
+        isAdmin
+          ? 'DELETE FROM revenue_entries WHERE id = $1'
+          : 'DELETE FROM revenue_entries WHERE id = $1 AND user_id = $2',
+        isAdmin ? [id] : [id, userId]
       );
       if (rowCount === 0) {
         res.status(404).json({ error: 'Revenue entry not found' });
