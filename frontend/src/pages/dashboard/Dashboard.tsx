@@ -431,9 +431,9 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Your position */}
+        {/* Your rankings */}
         <section className={styles.rankSection}>
-          <h3 className={styles.sectionTitle}>Your position</h3>
+          <h3 className={styles.sectionTitle}>Your rankings</h3>
           <div className={styles.rankCards}>
             <Link to="/rankings" className={styles.rankCard}>
               <span className={styles.rankCardLabel}>Work hours</span>

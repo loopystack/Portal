@@ -351,6 +351,12 @@
   width: 2rem;
 }
 
+.rankIcon {
+  font-size: 1.75em;
+  line-height: 1;
+  display: inline-block;
+}
+
 .nameCell {
   font-weight: 500;
   color: var(--text);

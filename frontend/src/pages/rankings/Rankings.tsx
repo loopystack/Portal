@@ -383,7 +383,7 @@ export default function Rankings() {
                       {(tableRevenue ?? revenue).map((r, i) => (
                         <tr key={r.userId}>
                           <td className={styles.rankCell}>
-                            {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                            {i === 0 ? <span className={styles.rankIcon}>👑</span> : i === 1 ? <span className={styles.rankIcon}>🐰</span> : i === 2 ? <span className={styles.rankIcon}>🐢</span> : i + 1}
                           </td>
                           <td className={styles.nameCell}>{r.displayName}</td>
                           <td>{formatMoney(r.monthlyRevenue)}</td>
